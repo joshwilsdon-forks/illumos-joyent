@@ -158,15 +158,6 @@ xdr_pathname4(register XDR *xdrs, pathname4 *objp)
 }
 
 bool_t
-xdr_nfs_lockid4(register XDR *xdrs, nfs_lockid4 *objp)
-{
-
-	if (!xdr_uint64_t(xdrs, objp))
-		return (FALSE);
-	return (TRUE);
-}
-
-bool_t
 xdr_nfs_cookie4(register XDR *xdrs, nfs_cookie4 *objp)
 {
 
@@ -922,9 +913,9 @@ bool_t
 xdr_clientaddr4(register XDR *xdrs, clientaddr4 *objp)
 {
 
-	if (!xdr_string(xdrs, &objp->r_netid, ~0))
+	if (!xdr_string(xdrs, &objp->na_r_netid, ~0))
 		return (FALSE);
-	if (!xdr_string(xdrs, &objp->r_addr, ~0))
+	if (!xdr_string(xdrs, &objp->na_r_addr, ~0))
 		return (FALSE);
 	return (TRUE);
 }
