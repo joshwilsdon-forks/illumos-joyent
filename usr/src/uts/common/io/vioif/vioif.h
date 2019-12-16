@@ -167,7 +167,9 @@ extern "C" {
 					VIRTIO_NET_F_HOST_TSO6 |	\
 					VIRTIO_NET_F_HOST_ECN |		\
 					VIRTIO_NET_F_MAC |		\
-					VIRTIO_NET_F_MTU)
+					VIRTIO_NET_F_MTU |		\
+					VIRTIO_NET_F_CTRL_VQ |		\
+					VIRTIO_NET_F_CTRL_RX)
 
 /*
  * VIRTIO NETWORK HEADER
@@ -200,6 +202,30 @@ struct virtio_net_hdr {
 #define	VIRTIO_NET_HDR_GSO_UDP		3
 #define	VIRTIO_NET_HDR_GSO_TCPV6	4
 #define	VIRTIO_NET_HDR_GSO_ECN		0x80
+
+/*
+ * VIRTIO CONTROL VIRTQUEUE HEADER
+ *
+ * This structure appears at the start of each control virtqueue request.
+ */
+struct virtio_net_ctrlq_hdr {
+	uint8_t		nvcqh_class;
+	uint8_t		nvcqh_command;
+	/* uint8_t 	data[]; */
+	/* uint8_t	ack;	*/
+} __packed;
+
+#define	VIRTIO_NET_CTRL_RX		0
+#define	VIRTIO_NET_CTRL_RX_PROMISC	0
+#define	VIRTIO_NET_CTRL_RX_ALLMULTI	1
+#define	VIRTIO_NET_CTRL_RX_ALLUNI	2
+#define	VIRTIO_NET_CTRL_RX_NOMULTI	3
+#define	VIRTIO_NET_CTRL_RX_NOUNI	4
+#define	VIRTIO_NET_CTRL_RX_NOBCAST	5
+
+/* Values of ack */
+#define	VIRTIO_NET_CQ_OK	0
+#define	VIRTIO_NET_CQ_ERR	1
 
 
 /*
@@ -346,6 +372,7 @@ struct vioif {
 
 	virtio_queue_t			*vif_rx_vq;
 	virtio_queue_t			*vif_tx_vq;
+	virtio_queue_t			*vif_ctrl_vq;
 
 	/* TX virtqueue management resources */
 	boolean_t			vif_tx_corked;
