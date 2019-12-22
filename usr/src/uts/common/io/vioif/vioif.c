@@ -435,34 +435,36 @@ vioif_free_bufs(vioif_t *vif)
 		vif->vif_rxbufs_capacity = 0;
 	}
 
-	VERIFY3U(vif->vif_nctrlbufs_alloc, ==, 0);
-	for (uint_t i = 0; i < vif->vif_ctrlbufs_capacity; i++) {
-		vioif_ctrlbuf_t *cb = &vif->vif_ctrlbufs_mem[i];
+	if (vif->vif_has_ctrlq) {
+		VERIFY3U(vif->vif_nctrlbufs_alloc, ==, 0);
+		for (uint_t i = 0; i < vif->vif_ctrlbufs_capacity; i++) {
+			vioif_ctrlbuf_t *cb = &vif->vif_ctrlbufs_mem[i];
 
-		/*
-		 * Ensure that this ctrlbuf is now in the free list
-		 */
-		VERIFY(list_link_active(&cb->cb_link));
-		list_remove(&vif->vif_ctrlbufs, cb);
+			/*
+			 * Ensure that this ctrlbuf is now in the free list
+			 */
+			VERIFY(list_link_active(&cb->cb_link));
+			list_remove(&vif->vif_ctrlbufs, cb);
 
-		cv_destroy(&cb->cb_cv);
+			cv_destroy(&cb->cb_cv);
 
-		if (cb->cb_dma != NULL) {
-			virtio_dma_free(cb->cb_dma);
-			cb->cb_dma = NULL;
+			if (cb->cb_dma != NULL) {
+				virtio_dma_free(cb->cb_dma);
+				cb->cb_dma = NULL;
+			}
+
+			if (cb->cb_chain != NULL) {
+				virtio_chain_free(cb->cb_chain);
+				cb->cb_chain = NULL;
+			}
 		}
-
-		if (cb->cb_chain != NULL) {
-			virtio_chain_free(cb->cb_chain);
-			cb->cb_chain = NULL;
+		VERIFY(list_is_empty(&vif->vif_ctrlbufs));
+		if (vif->vif_ctrlbufs_mem != NULL) {
+			kmem_free(vif->vif_ctrlbufs_mem,
+			    sizeof (vioif_ctrlbuf_t) * vif->vif_ctrlbufs_capacity);
+			vif->vif_ctrlbufs_mem = NULL;
+			vif->vif_ctrlbufs_capacity = 0;
 		}
-	}
-	VERIFY(list_is_empty(&vif->vif_ctrlbufs));
-	if (vif->vif_ctrlbufs_mem != NULL) {
-		kmem_free(vif->vif_ctrlbufs_mem,
-		    sizeof (vioif_ctrlbuf_t) * vif->vif_ctrlbufs_capacity);
-		vif->vif_ctrlbufs_mem = NULL;
-		vif->vif_ctrlbufs_capacity = 0;
 	}
 }
 
@@ -490,7 +492,7 @@ vioif_alloc_bufs(vioif_t *vif)
 	list_create(&vif->vif_rxbufs, sizeof (vioif_rxbuf_t),
 	    offsetof(vioif_rxbuf_t, rb_link));
 
-	if (vioif_has_feature(vif, VIRTIO_NET_F_CTRL_VQ)) {
+	if (vif->vif_has_ctrlq) {
 		vif->vif_ctrlbufs_capacity = MIN(VIRTIO_NET_CTRL_BUFS,
 		    virtio_queue_size(vif->vif_ctrl_vq));
 		vif->vif_ctrlbufs_mem = kmem_zalloc(
@@ -631,21 +633,32 @@ vioif_ctrlq_req(vioif_t *vif, uint8_t class, uint8_t cmd, void *data,
 	uint8_t *p = NULL;
 	struct virtio_net_ctrlq_hdr hdr = {
 		.vnch_class = class,
-		.vnch_command = cmd
+		.vnch_command = cmd,
 	};
 	size_t len = sizeof (hdr) + datalen + 1; /* + 1 for trailing ack byte */
 	int r = DDI_SUCCESS;
 
-	VERIFY(vioif_has_feature(vif, VIRTIO_NET_F_CTRL_VQ));
+	/*
+	 * We shouldn't be called unless the ctrlq feature has been
+	 * negotiated with the host
+	 */
+	VERIFY(vif->vif_has_ctrlq);
 
 	mutex_enter(&vif->vif_mutex);
 	cb = vioif_ctrlbuf_alloc(vif);
 	if (cb == NULL) {
 		vif->vif_noctrlbuf++;
+		mutex_exit(&vif->vif_mutex);
 		r = DDI_FAILURE;
-		goto fail;
+		goto done;
 	}
 	mutex_exit(&vif->vif_mutex);
+
+	if (len > virtio_dma_size(cb->cb_dma)) {
+		vif->vif_ctrlbuf_toosmall++;
+		r = DDI_FAILURE;
+		goto done;
+	}
 
 	p = virtio_dma_va(cb->cb_dma, 0);
 	bzero(p, len);
@@ -660,7 +673,7 @@ vioif_ctrlq_req(vioif_t *vif, uint8_t class, uint8_t cmd, void *data,
 	if ((r = virtio_chain_append(cb->cb_chain,
 	    virtio_dma_cookie_pa(cb->cb_dma, 0), len,
 	    VIRTIO_DIR_DEVICE_READS)) != DDI_SUCCESS) {
-		goto fail;
+		goto done;
 	}
 
 	virtio_dma_sync(cb->cb_dma, DDI_DMA_SYNC_FORDEV);
@@ -670,12 +683,17 @@ vioif_ctrlq_req(vioif_t *vif, uint8_t class, uint8_t cmd, void *data,
 	while (!cb->cb_done) {
 		cv_wait(&cb->cb_cv, &vif->vif_mutex);
 	}
-	
+	mutex_exit(&vif->vif_mutex);
+
 	if (*p != VIRTIO_NET_CQ_OK) {
 		r = DDI_FAILURE;
 	}
 
-fail:
+done:
+	mutex_enter(&vif->vif_mutex);
+	vioif_ctrlbuf_free(vif, cb);
+	mutex_exit(&vif->vif_mutex);
+
 	return (r);
 }
 
@@ -696,11 +714,15 @@ vioif_m_multicst(void *arg, boolean_t add, const uint8_t *mcst_addr)
 static int
 vioif_m_setpromisc(void *arg, boolean_t on)
 {
-	/*
-	 * Even though we cannot currently enable promiscuous mode, we return
-	 * success here to allow tools like snoop(1M) to continue to function.
-	 */
-	return (0);
+	vioif_t *vif = arg;
+	uint8_t val = on ? 1 : 0;
+
+	if (!vif->vif_has_ctrlq_rx) {
+		return (ENOTSUP);
+	}
+
+	return (vioif_ctrlq_req(vif, VIRTIO_NET_CTRL_RX,
+	    VIRTIO_NET_CTRL_RX_PROMISC, &val, sizeof (val)));
 }
 
 static int
@@ -1760,6 +1782,25 @@ vioif_tx_handler(caddr_t arg0, caddr_t arg1)
 	return (DDI_INTR_CLAIMED);
 }
 
+static uint_t
+vioif_ctrlq_handler(caddr_t arg0, caddr_t arg1)
+{
+	vioif_t *vif = (vioif_t *)arg0;
+	virtio_chain_t *vic;
+
+	mutex_enter(&vif->vif_mutex);
+	while ((vic = virtio_queue_poll(vif->vif_ctrl_vq)) != NULL) {
+		vioif_ctrlbuf_t *cb = virtio_chain_data(vic);
+
+		virtio_dma_sync(cb->cb_dma, DDI_DMA_SYNC_FORCPU);
+		cb->cb_done = B_TRUE;
+		cv_signal(&cb->cb_cv);
+	}
+	mutex_exit(&vif->vif_mutex);
+
+	return (DDI_INTR_CLAIMED);
+}
+
 static void
 vioif_check_features(vioif_t *vif)
 {
@@ -1800,6 +1841,25 @@ vioif_check_features(vioif_t *vif)
 		}
 		if (tso6 && ecn) {
 			vif->vif_tx_tso6 = 1;
+		}
+	}
+
+	if (vioif_has_feature(vif, VIRTIO_NET_F_CTRL_VQ)) {
+		vif->vif_has_ctrlq = 1;
+	}
+
+	if (vioif_has_feature(vif, VIRTIO_NET_F_CTRL_RX)) {
+		vif->vif_has_ctrlq_rx = 1;
+
+		/*
+		 * It is mandatory that the control virtqueue feature is
+		 * advertised by the host if the VIRTIO_NET_F_CTRL_RX
+		 * feature is advertised. We ignore the VIRTIO_NET_F_CTRL_RX
+		 * feature if this is not the case.
+		 */
+		if (!vif->vif_has_ctrlq) {
+			/* XXX: Should we emit a warning? */
+			vif->vif_has_ctrlq_rx = 0;
 		}
 	}
 }
@@ -1873,6 +1933,13 @@ vioif_attach(dev_info_t *dip, ddi_attach_cmd_t cmd)
 		goto fail;
 	}
 
+	if (vioif_has_feature(vif, VIRTIO_NET_F_CTRL_VQ) &&
+	    (vif->vif_ctrl_vq = virtio_queue_alloc(vio,
+	    VIRTIO_NET_VIRTQ_CONTROL, "ctrlq", vioif_ctrlq_handler, vif,
+	    B_FALSE, VIOIF_MAX_SEGS)) == NULL) {
+		goto fail;
+	}
+
 	if (virtio_init_complete(vio, vioif_select_interrupt_types()) !=
 	    DDI_SUCCESS) {
 		dev_err(dip, CE_WARN, "failed to complete Virtio init");
@@ -1881,6 +1948,8 @@ vioif_attach(dev_info_t *dip, ddi_attach_cmd_t cmd)
 
 	virtio_queue_no_interrupt(vif->vif_rx_vq, B_TRUE);
 	virtio_queue_no_interrupt(vif->vif_tx_vq, B_TRUE);
+	if (vif->vif_ctrl_vq != NULL)
+		virtio_queue_no_interrupt(vif->vif_ctrl_vq, B_TRUE);
 
 	mutex_init(&vif->vif_mutex, NULL, MUTEX_DRIVER, virtio_intr_pri(vio));
 	mutex_enter(&vif->vif_mutex);
