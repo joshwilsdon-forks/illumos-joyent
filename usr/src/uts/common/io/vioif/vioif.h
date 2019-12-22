@@ -209,13 +209,14 @@ struct virtio_net_hdr {
  * This structure appears at the start of each control virtqueue request.
  */
 struct virtio_net_ctrlq_hdr {
-	uint8_t		nvcqh_class;
-	uint8_t		nvcqh_command;
-	/* uint8_t 	data[]; */
-	/* uint8_t	ack;	*/
+	uint8_t		vnch_class;
+	uint8_t		vnch_command;
 } __packed;
 
+/* Contol Queue Classes */
 #define	VIRTIO_NET_CTRL_RX		0
+
+/* CTRL_RX commands */
 #define	VIRTIO_NET_CTRL_RX_PROMISC	0
 #define	VIRTIO_NET_CTRL_RX_ALLMULTI	1
 #define	VIRTIO_NET_CTRL_RX_ALLUNI	2
@@ -223,7 +224,7 @@ struct virtio_net_ctrlq_hdr {
 #define	VIRTIO_NET_CTRL_RX_NOUNI	4
 #define	VIRTIO_NET_CTRL_RX_NOBCAST	5
 
-/* Values of ack */
+/* Control queue ack values */
 #define	VIRTIO_NET_CQ_OK	0
 #define	VIRTIO_NET_CQ_ERR	1
 
@@ -240,6 +241,13 @@ struct virtio_net_ctrlq_hdr {
  */
 #define	VIRTIO_NET_TX_BUFS		256
 #define	VIRTIO_NET_RX_BUFS		256
+
+/*
+ * Initially, only use a single buf for control queue requests (when
+ * present). If this becomes a bottleneck, we can simply increase this
+ * value as necessary.
+ */
+#define	VIRTIO_NET_CTRL_BUFS		1
 
 /*
  * The virtio net header and the first buffer segment share the same DMA
@@ -287,6 +295,7 @@ struct virtio_net_ctrlq_hdr {
  */
 #define	VIOIF_TX_INLINE_SIZE		(2 * 1024)
 
+#define	VIOIF_CTRL_SIZE			(1024)
 
 /*
  * TYPE DEFINITIONS
@@ -314,6 +323,18 @@ typedef struct vioif_rxbuf {
 
 	list_node_t			rb_link;
 } vioif_rxbuf_t;
+
+typedef struct vioif_ctrlbuf {
+	vioif_t				*cb_vioif;
+
+	virtio_dma_t			*cb_dma;
+	virtio_chain_t			*cb_chain;
+
+	kcondvar_t			cb_cv;
+	boolean_t			cb_done;
+
+	list_node_t			cb_link;
+} vioif_ctrlbuf_t;
 
 /*
  * Transmit buffers are also allocated in advance.  DMA memory is allocated for
@@ -422,6 +443,11 @@ struct vioif {
 	uint_t				vif_rxcopy_thresh;
 	uint_t				vif_txcopy_thresh;
 
+	list_t				vif_ctrlbufs;
+	uint_t				vif_nctrlbufs_alloc;
+	uint_t				vif_ctrlbufs_capacity;
+	vioif_ctrlbuf_t			*vif_ctrlbufs_mem;
+
 	/*
 	 * Statistics visible through mac:
 	 */
@@ -451,6 +477,8 @@ struct vioif {
 	uint64_t			vif_txfail_indirect_limit;
 
 	uint64_t			vif_stat_tx_reclaim;
+
+	uint64_t			vif_noctrlbuf;
 };
 
 #ifdef __cplusplus

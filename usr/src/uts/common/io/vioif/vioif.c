@@ -328,6 +328,32 @@ vioif_rx_free_callback(caddr_t free_arg)
 	mutex_exit(&vif->vif_mutex);
 }
 
+static vioif_ctrlbuf_t *
+vioif_ctrlbuf_alloc(vioif_t *vif)
+{
+	vioif_ctrlbuf_t *cb;
+
+	VERIFY(MUTEX_HELD(&vif->vif_mutex));
+
+	if ((cb = list_remove_head(&vif->vif_ctrlbufs)) != NULL) {
+		vif->vif_nctrlbufs_alloc++;
+	}
+
+	return (cb);
+}
+
+static void
+vioif_ctrlbuf_free(vioif_t *vif, vioif_ctrlbuf_t *cb)
+{
+	VERIFY(MUTEX_HELD(&vif->vif_mutex));
+
+	VERIFY3U(vif->vif_nctrlbufs_alloc, >, 0);
+	vif->vif_nctrlbufs_alloc--;
+
+	virtio_chain_clear(cb->cb_chain);
+	list_insert_head(&vif->vif_ctrlbufs, cb);
+}
+
 static void
 vioif_free_bufs(vioif_t *vif)
 {
@@ -408,6 +434,36 @@ vioif_free_bufs(vioif_t *vif)
 		vif->vif_rxbufs_mem = NULL;
 		vif->vif_rxbufs_capacity = 0;
 	}
+
+	VERIFY3U(vif->vif_nctrlbufs_alloc, ==, 0);
+	for (uint_t i = 0; i < vif->vif_ctrlbufs_capacity; i++) {
+		vioif_ctrlbuf_t *cb = &vif->vif_ctrlbufs_mem[i];
+
+		/*
+		 * Ensure that this ctrlbuf is now in the free list
+		 */
+		VERIFY(list_link_active(&cb->cb_link));
+		list_remove(&vif->vif_ctrlbufs, cb);
+
+		cv_destroy(&cb->cb_cv);
+
+		if (cb->cb_dma != NULL) {
+			virtio_dma_free(cb->cb_dma);
+			cb->cb_dma = NULL;
+		}
+
+		if (cb->cb_chain != NULL) {
+			virtio_chain_free(cb->cb_chain);
+			cb->cb_chain = NULL;
+		}
+	}
+	VERIFY(list_is_empty(&vif->vif_ctrlbufs));
+	if (vif->vif_ctrlbufs_mem != NULL) {
+		kmem_free(vif->vif_ctrlbufs_mem,
+		    sizeof (vioif_ctrlbuf_t) * vif->vif_ctrlbufs_capacity);
+		vif->vif_ctrlbufs_mem = NULL;
+		vif->vif_ctrlbufs_capacity = 0;
+	}
 }
 
 static int
@@ -434,6 +490,16 @@ vioif_alloc_bufs(vioif_t *vif)
 	list_create(&vif->vif_rxbufs, sizeof (vioif_rxbuf_t),
 	    offsetof(vioif_rxbuf_t, rb_link));
 
+	if (vioif_has_feature(vif, VIRTIO_NET_F_CTRL_VQ)) {
+		vif->vif_ctrlbufs_capacity = MIN(VIRTIO_NET_CTRL_BUFS,
+		    virtio_queue_size(vif->vif_ctrl_vq));
+		vif->vif_ctrlbufs_mem = kmem_zalloc(
+		    sizeof (vioif_ctrlbuf_t) * vif->vif_ctrlbufs_capacity,
+		    KM_SLEEP);
+	}
+	list_create(&vif->vif_ctrlbufs, sizeof (vioif_ctrlbuf_t),
+	    offsetof(vioif_ctrlbuf_t, cb_link));
+
 	/*
 	 * Do not loan more than half of our allocated receive buffers into
 	 * the networking stack.
@@ -449,6 +515,9 @@ vioif_alloc_bufs(vioif_t *vif)
 	}
 	for (uint_t i = 0; i < vif->vif_rxbufs_capacity; i++) {
 		list_insert_tail(&vif->vif_rxbufs, &vif->vif_rxbufs_mem[i]);
+	}
+	for (uint_t i = 0; i < vif->vif_ctrlbufs_capacity; i++) {
+		list_insert_tail(&vif->vif_ctrlbufs, &vif->vif_ctrlbufs_mem[i]);
 	}
 
 	/*
@@ -483,6 +552,28 @@ vioif_alloc_bufs(vioif_t *vif)
 		tb->tb_dmaext = kmem_zalloc(
 		    sizeof (virtio_dma_t *) * tb->tb_dmaext_capacity,
 		    KM_SLEEP);
+	}
+
+	/*
+	 * Control queue buffers are also small (less than a page), so
+	 * they also request a single cookie.
+	 */
+	for (vioif_ctrlbuf_t *cb = list_head(&vif->vif_ctrlbufs); cb != NULL;
+	    cb = list_next(&vif->vif_ctrlbufs, cb)) {
+		cv_init(&cb->cb_cv, NULL, CV_DRIVER, NULL);
+
+		if ((cb->cb_dma = virtio_dma_alloc(vif->vif_virtio,
+		    VIOIF_CTRL_SIZE, &attr,
+		    DDI_DMA_STREAMING | DDI_DMA_RDWR, KM_SLEEP)) == NULL) {
+			goto fail;
+		}
+		VERIFY3U(virtio_dma_ncookies(cb->cb_dma), ==, 1);
+
+		if ((cb->cb_chain = virtio_chain_alloc(vif->vif_ctrl_vq,
+		    KM_SLEEP)) == NULL) {
+			goto fail;
+		}
+		virtio_chain_data_set(cb->cb_chain, cb);
 	}
 
 	/*
@@ -530,6 +621,62 @@ vioif_alloc_bufs(vioif_t *vif)
 fail:
 	vioif_free_bufs(vif);
 	return (ENOMEM);
+}
+
+static int
+vioif_ctrlq_req(vioif_t *vif, uint8_t class, uint8_t cmd, void *data,
+    size_t datalen)
+{
+	vioif_ctrlbuf_t *cb = NULL;
+	uint8_t *p = NULL;
+	struct virtio_net_ctrlq_hdr hdr = {
+		.vnch_class = class,
+		.vnch_command = cmd
+	};
+	size_t len = sizeof (hdr) + datalen + 1; /* + 1 for trailing ack byte */
+	int r = DDI_SUCCESS;
+
+	VERIFY(vioif_has_feature(vif, VIRTIO_NET_F_CTRL_VQ));
+
+	mutex_enter(&vif->vif_mutex);
+	cb = vioif_ctrlbuf_alloc(vif);
+	if (cb == NULL) {
+		vif->vif_noctrlbuf++;
+		r = DDI_FAILURE;
+		goto fail;
+	}
+	mutex_exit(&vif->vif_mutex);
+
+	p = virtio_dma_va(cb->cb_dma, 0);
+	bzero(p, len);
+
+	bcopy(&hdr, p, sizeof (hdr));
+	p += sizeof (hdr);
+
+	bcopy(data, p, datalen);
+	p += datalen;
+	/* p now points at the ACK byte */
+
+	if ((r = virtio_chain_append(cb->cb_chain,
+	    virtio_dma_cookie_pa(cb->cb_dma, 0), len,
+	    VIRTIO_DIR_DEVICE_READS)) != DDI_SUCCESS) {
+		goto fail;
+	}
+
+	virtio_dma_sync(cb->cb_dma, DDI_DMA_SYNC_FORDEV);
+	virtio_chain_submit(cb->cb_chain, B_TRUE);
+
+	mutex_enter(&vif->vif_mutex);
+	while (!cb->cb_done) {
+		cv_wait(&cb->cb_cv, &vif->vif_mutex);
+	}
+	
+	if (*p != VIRTIO_NET_CQ_OK) {
+		r = DDI_FAILURE;
+	}
+
+fail:
+	return (r);
 }
 
 static int
