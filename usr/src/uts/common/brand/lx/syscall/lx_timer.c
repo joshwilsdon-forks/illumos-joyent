@@ -10,7 +10,7 @@
  */
 
 /*
- * Copyright 2016 Joyent, Inc.
+ * Copyright 2020 Joyent, Inc.
  */
 
 /*
@@ -20,9 +20,16 @@
  * contrast, the Linux kernel is furnished with an overabundance of narrowly
  * differentiated clock types.
  *
- * Fortunately, most of the commonly used Linux clock types are either similar
- * enough to the native clock backends that they can be directly mapped, or
- * represent queries to the per-process and per-LWP microstate counters.
+ * Fortunately, most of the commonly used Linux clock types are similar
+ * enough to the native clock backends that they can be directly mapped.
+ *
+ * Unfortunately, while CLOCK_{THREAD,PROCESS}_CPUTIME_ID are *somewhat*
+ * implemented in the main illumos kernel as itimers (see setitimer(2)), we
+ * would need to entirely bringup of CLOCK_{THREAD,PROCESS}_CPUTIME_ID to
+ * implement timer_create() and friends.  For now, we opt to map it to
+ * CLOCK_HIGHRES for timer_create() and friends, but continue to emulate
+ * more-accurate queries to per-process or per-LWP microstate accounting for
+ * getres, gettime, or settime.
  *
  * CLOCK_BOOTTIME is identical to CLOCK_MONOTONIC, except that it takes into
  * account time that the system is suspended. Since that is uninteresting to
@@ -83,8 +90,8 @@ struct lx_timezone {
 static lx_clock_backend_t lx_clock_backends[] = {
 	NATIVE(CLOCK_REALTIME),		/* LX_CLOCK_REALTIME */
 	NATIVE(CLOCK_HIGHRES),		/* LX_CLOCK_MONOTONIC */
-	EMUL(CLOCK_PROCESS_CPUTIME_ID),	/* LX_CLOCK_PROCESS_CPUTIME_ID */
-	EMUL(CLOCK_THREAD_CPUTIME_ID),	/* LX_CLOCK_THREAD_CPUTIME_ID */
+	EMUL(CLOCK_HIGHRES),		/* LX_CLOCK_PROCESS_CPUTIME_ID */
+	EMUL(CLOCK_HIGHRES),		/* LX_CLOCK_THREAD_CPUTIME_ID */
 	NATIVE(CLOCK_HIGHRES),		/* LX_CLOCK_MONOTONIC_RAW */
 	NATIVE(CLOCK_REALTIME),		/* LX_CLOCK_REALTIME_COARSE */
 	NATIVE(CLOCK_HIGHRES),		/* LX_CLOCK_MONOTONIC_COARSE */
