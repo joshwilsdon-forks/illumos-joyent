@@ -12,7 +12,7 @@
 /*
  * Copyright 2013 Nexenta Inc.  All rights reserved.
  * Copyright (c) 2014, 2016 by Delphix. All rights reserved.
- * Copyright 2019 Joyent, Inc.
+ * Copyright 2020 Joyent, Inc.
  * Copyright 2019 Joshua M. Clulow <josh@sysmgr.org>
  */
 
@@ -446,8 +446,6 @@ vioif_free_bufs(vioif_t *vif)
 			VERIFY(list_link_active(&cb->cb_link));
 			list_remove(&vif->vif_ctrlbufs, cb);
 
-			cv_destroy(&cb->cb_cv);
-
 			if (cb->cb_dma != NULL) {
 				virtio_dma_free(cb->cb_dma);
 				cb->cb_dma = NULL;
@@ -562,8 +560,6 @@ vioif_alloc_bufs(vioif_t *vif)
 	 */
 	for (vioif_ctrlbuf_t *cb = list_head(&vif->vif_ctrlbufs); cb != NULL;
 	    cb = list_next(&vif->vif_ctrlbufs, cb)) {
-		cv_init(&cb->cb_cv, NULL, CV_DRIVER, NULL);
-
 		if ((cb->cb_dma = virtio_dma_alloc(vif->vif_virtio,
 		    VIOIF_CTRL_SIZE, &attr,
 		    DDI_DMA_STREAMING | DDI_DMA_RDWR, KM_SLEEP)) == NULL) {
@@ -630,6 +626,7 @@ vioif_ctrlq_req(vioif_t *vif, uint8_t class, uint8_t cmd, void *data,
     size_t datalen)
 {
 	vioif_ctrlbuf_t *cb = NULL;
+	virtio_chain_t *vic = NULL;
 	uint8_t *p = NULL;
 	struct virtio_net_ctrlq_hdr hdr = {
 		.vnch_class = class,
@@ -679,10 +676,18 @@ vioif_ctrlq_req(vioif_t *vif, uint8_t class, uint8_t cmd, void *data,
 	virtio_dma_sync(cb->cb_dma, DDI_DMA_SYNC_FORDEV);
 	virtio_chain_submit(cb->cb_chain, B_TRUE);
 
+	/*
+	 * Spin waiting for response.
+	 */
 	mutex_enter(&vif->vif_mutex);
-	while (!cb->cb_done) {
-		cv_wait(&cb->cb_cv, &vif->vif_mutex);
+	while ((vic = virtio_queue_poll(vif->vif_ctrl_vq)) == NULL) {
+		mutex_exit(&vif->vif_mutex);
+		drv_usecwait(1000);
+		mutex_enter(&vif->vif_mutex);
 	}
+
+	virtio_dma_sync(cb->cb_dma, DDI_DMA_SYNC_FORCPU);
+	VERIFY3P(virtio_chain_data(vic), ==, cb);
 	mutex_exit(&vif->vif_mutex);
 
 	if (*p != VIRTIO_NET_CQ_OK) {
@@ -1782,25 +1787,6 @@ vioif_tx_handler(caddr_t arg0, caddr_t arg1)
 	return (DDI_INTR_CLAIMED);
 }
 
-static uint_t
-vioif_ctrlq_handler(caddr_t arg0, caddr_t arg1)
-{
-	vioif_t *vif = (vioif_t *)arg0;
-	virtio_chain_t *vic;
-
-	mutex_enter(&vif->vif_mutex);
-	while ((vic = virtio_queue_poll(vif->vif_ctrl_vq)) != NULL) {
-		vioif_ctrlbuf_t *cb = virtio_chain_data(vic);
-
-		virtio_dma_sync(cb->cb_dma, DDI_DMA_SYNC_FORCPU);
-		cb->cb_done = B_TRUE;
-		cv_signal(&cb->cb_cv);
-	}
-	mutex_exit(&vif->vif_mutex);
-
-	return (DDI_INTR_CLAIMED);
-}
-
 static void
 vioif_check_features(vioif_t *vif)
 {
@@ -1935,7 +1921,7 @@ vioif_attach(dev_info_t *dip, ddi_attach_cmd_t cmd)
 
 	if (vioif_has_feature(vif, VIRTIO_NET_F_CTRL_VQ) &&
 	    (vif->vif_ctrl_vq = virtio_queue_alloc(vio,
-	    VIRTIO_NET_VIRTQ_CONTROL, "ctrlq", vioif_ctrlq_handler, vif,
+	    VIRTIO_NET_VIRTQ_CONTROL, "ctrlq", NULL, vif,
 	    B_FALSE, VIOIF_MAX_SEGS)) == NULL) {
 		goto fail;
 	}

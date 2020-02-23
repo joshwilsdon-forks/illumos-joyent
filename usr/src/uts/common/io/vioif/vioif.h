@@ -10,7 +10,7 @@
  */
 
 /*
- * Copyright 2019 Joyent, Inc.
+ * Copyright 2020 Joyent, Inc.
  */
 
 /*
@@ -329,9 +329,6 @@ typedef struct vioif_ctrlbuf {
 
 	virtio_dma_t			*cb_dma;
 	virtio_chain_t			*cb_chain;
-
-	kcondvar_t			cb_cv;
-	boolean_t			cb_done;
 
 	list_node_t			cb_link;
 } vioif_ctrlbuf_t;
