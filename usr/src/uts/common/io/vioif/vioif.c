@@ -669,7 +669,7 @@ vioif_ctrlq_req(vioif_t *vif, uint8_t class, uint8_t cmd, void *data,
 
 	if ((r = virtio_chain_append(cb->cb_chain,
 	    virtio_dma_cookie_pa(cb->cb_dma, 0), len,
-	    VIRTIO_DIR_DEVICE_READS)) != DDI_SUCCESS) {
+	    VIRTIO_DIR_DEVICE_WRITES)) != DDI_SUCCESS) {
 		goto done;
 	}
 
