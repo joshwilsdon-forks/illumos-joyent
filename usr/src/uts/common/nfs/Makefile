@@ -33,7 +33,7 @@ HDRS=	export.h	lm.h						\
 	nfs_clnt.h	nfs_log.h 	nfs_sec.h	nfs4.h		\
 	nfs4_attr.h	nfs4_clnt.h	rnode.h		rnode4.h	\
 	nfs4_kprot.h	nfs4_db_impl.h	nfs4_idmap_impl.h \
-	nfsid_map.h	auth.h		nfs_cmd.h
+	nfsid_map.h	auth.h		nfs_cmd.h	nfs4x.h
 
 ROOTDIRS= $(ROOT)/usr/include/nfs
 

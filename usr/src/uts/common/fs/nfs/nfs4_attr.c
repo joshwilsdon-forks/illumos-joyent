@@ -772,6 +772,9 @@ struct nfs4_ntov_map nfs4_ntov_map[] = {
 		xdr_u_longlong_t,
 		NULL, "fattr4_mounted_on_fileid" },
 
+	{ FATTR4_SUPPATTR_EXCLCREAT_MASK_LOCAL, 0, FALSE, FALSE,
+		FATTR4_MOUNTED_ON_FILEID + 1, 0, xdr_bitmap4,
+		NULL, "fattr4_suppattr_exclcreat" },
 };
 
 uint_t nfs4_ntov_map_size = sizeof (nfs4_ntov_map) /
