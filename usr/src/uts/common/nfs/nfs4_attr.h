@@ -306,13 +306,13 @@ extern "C" {
 )
 
 /* nfsv4.1  */
-#define RFS4_SUPPATTR_EXCLCREAT (               \
-	    FATTR4_SIZE_MASK                |	\
-	    FATTR4_MODE_MASK                |	\
-	    FATTR4_ACL_MASK                 |	\
-	    FATTR4_OWNER_MASK               |	\
-	    FATTR4_OWNER_GROUP_MASK         |	\
-	    FATTR4_TIME_ACCESS_SET_MASK)
+#define	RFS4_SUPPATTR_EXCLCREAT (		\
+	FATTR4_SIZE_MASK		|	\
+	FATTR4_MODE_MASK		|	\
+	FATTR4_ACL_MASK			|	\
+	FATTR4_OWNER_MASK		|	\
+	FATTR4_OWNER_GROUP_MASK		|	\
+	FATTR4_TIME_ACCESS_SET_MASK)
 
 #define	FATTR4_FSID_EQ(a, b)	\
 	((a)->major == (b)->major && (a)->minor == (b)->minor)

@@ -422,7 +422,7 @@ typedef uint32_t aclflag4;		/* 4.1 */
 struct nfsacl41 {			/* 4.1 */
 	aclflag4 na41_flag;
 	struct {
-		u_int na41_aces_len;
+		uint_t na41_aces_len;
 		nfsace4 *na41_aces_val;
 	} na41_aces;
 };
@@ -526,7 +526,7 @@ typedef enum layouttype4 layouttype4;
 struct layout_content4 {
 	layouttype4 loc_type;
 	struct {
-		u_int loc_body_len;
+		uint_t loc_body_len;
 		char *loc_body_val;
 	} loc_body;
 };
@@ -545,7 +545,7 @@ typedef struct layout_content4 layout_content4;
 struct layouthint4 {
 	layouttype4 loh_type;
 	struct {
-		u_int loh_body_len;
+		uint_t loh_body_len;
 		char *loh_body_val;
 	} loh_body;
 };
@@ -572,7 +572,7 @@ typedef char deviceid4[NFS4_DEVICEID4_SIZE];
 struct device_addr4 {
 	layouttype4 da_layout_type;
 	struct {
-		u_int da_addr_body_len;
+		uint_t da_addr_body_len;
 		char *da_addr_body_val;
 	} da_addr_body;
 };
@@ -581,7 +581,7 @@ typedef struct device_addr4 device_addr4;
 struct layoutupdate4 {
 	layouttype4 lou_type;
 	struct {
-		u_int lou_body_len;
+		uint_t lou_body_len;
 		char *lou_body_val;
 	} lou_body;
 };
@@ -605,7 +605,7 @@ struct layoutreturn_file4 {
 	length4 lrf_length;
 	stateid4 lrf_stateid;
 	struct {
-		u_int lrf_body_len;
+		uint_t lrf_body_len;
 		char *lrf_body_val;
 	} lrf_body;
 };
@@ -655,7 +655,7 @@ struct threshold_item4 {
 	layouttype4 thi_layout_type;
 	bitmap4 thi_hintset;
 	struct {
-		u_int thi_hintlist_len;
+		uint_t thi_hintlist_len;
 		char *thi_hintlist_val;
 	} thi_hintlist;
 };
@@ -663,7 +663,7 @@ typedef struct threshold_item4 threshold_item4;
 
 struct mdsthreshold4 {
 	struct {
-		u_int mth_hints_len;
+		uint_t mth_hints_len;
 		threshold_item4 *mth_hints_val;
 	} mth_hints;
 };
@@ -673,7 +673,7 @@ typedef struct mdsthreshold4 mdsthreshold4;
 struct retention_get4 {
 	uint64_t rg_duration;
 	struct {
-		u_int rg_begin_time_len;
+		uint_t rg_begin_time_len;
 		nfstime4 *rg_begin_time_val;
 	} rg_begin_time;
 };
@@ -682,7 +682,7 @@ typedef struct retention_get4 retention_get4;
 struct retention_set4 {
 	bool_t rs_enable;
 	struct {
-		u_int rs_duration_len;
+		uint_t rs_duration_len;
 		uint64_t *rs_duration_val;
 	} rs_duration;
 };
@@ -819,7 +819,7 @@ typedef nfstime4 fattr4_dir_notif_delay;
 typedef nfstime4 fattr4_dirent_notif_delay;
 
 typedef struct {
-	u_int fattr4_fs_layout_types_len;
+	uint_t fattr4_fs_layout_types_len;
 	layouttype4 *fattr4_fs_layout_types_val;
 } fattr4_fs_layout_types;
 
@@ -834,7 +834,7 @@ typedef uint32_t fattr4_layout_blksize;
 typedef layouthint4 fattr4_layout_hint;
 
 typedef struct {
-	u_int fattr4_layout_types_len;
+	uint_t fattr4_layout_types_len;
 	layouttype4 *fattr4_layout_types_val;
 } fattr4_layout_types;
 
@@ -948,7 +948,7 @@ typedef change_policy4 fattr4_change_policy;
 #define	FATTR4_FS_CHARSET_CAP 76
 
 /* new to NFSv4.2 */
-#define FATTR4_SEC_LABEL 80
+#define	FATTR4_SEC_LABEL 80
 
 struct fattr4 {
 	bitmap4 attrmask;
@@ -987,7 +987,7 @@ typedef struct nfs_client_id4 nfs_client_id4;
 struct client_owner4 {
 	verifier4 co_verifier;
 	struct {
-		u_int co_ownerid_len;
+		uint_t co_ownerid_len;
 		char *co_ownerid_val;
 	} co_ownerid;
 };
@@ -996,7 +996,7 @@ typedef struct client_owner4 client_owner4;
 struct server_owner4 {
 	uint64_t so_minor_id;
 	struct {
-		u_int so_major_id_len;
+		uint_t so_major_id_len;
 		char *so_major_id_val;
 	} so_major_id;
 };
@@ -1052,7 +1052,7 @@ typedef enum ssv_subkey4 ssv_subkey4;
 struct ssv_mic_plain_tkn4 {
 	uint32_t smpt_ssv_seq;
 	struct {
-		u_int smpt_orig_plain_len;
+		uint_t smpt_orig_plain_len;
 		char *smpt_orig_plain_val;
 	} smpt_orig_plain;
 };
@@ -1063,7 +1063,7 @@ typedef struct ssv_mic_plain_tkn4 ssv_mic_plain_tkn4;
 struct ssv_mic_tkn4 {
 	uint32_t smt_ssv_seq;
 	struct {
-		u_int smt_hmac_len;
+		uint_t smt_hmac_len;
 		char *smt_hmac_val;
 	} smt_hmac;
 };
@@ -1073,16 +1073,16 @@ typedef struct ssv_mic_tkn4 ssv_mic_tkn4;
 
 struct ssv_seal_plain_tkn4 {
 	struct {
-		u_int sspt_confounder_len;
+		uint_t sspt_confounder_len;
 		char *sspt_confounder_val;
 	} sspt_confounder;
 	uint32_t sspt_ssv_seq;
 	struct {
-		u_int sspt_orig_plain_len;
+		uint_t sspt_orig_plain_len;
 		char *sspt_orig_plain_val;
 	} sspt_orig_plain;
 	struct {
-		u_int sspt_pad_len;
+		uint_t sspt_pad_len;
 		char *sspt_pad_val;
 	} sspt_pad;
 };
@@ -1093,15 +1093,15 @@ typedef struct ssv_seal_plain_tkn4 ssv_seal_plain_tkn4;
 struct ssv_seal_cipher_tkn4 {
 	uint32_t ssct_ssv_seq;
 	struct {
-		u_int ssct_iv_len;
+		uint_t ssct_iv_len;
 		char *ssct_iv_val;
 	} ssct_iv;
 	struct {
-		u_int ssct_encr_data_len;
+		uint_t ssct_encr_data_len;
 		char *ssct_encr_data_val;
 	} ssct_encr_data;
 	struct {
-		u_int ssct_hmac_len;
+		uint_t ssct_hmac_len;
 		char *ssct_hmac_val;
 	} ssct_hmac;
 };
@@ -1110,7 +1110,7 @@ typedef struct ssv_seal_cipher_tkn4 ssv_seal_cipher_tkn4;
 struct fs_locations_server4 {
 	int32_t fls_currency;
 	struct {
-		u_int fls_info_len;
+		uint_t fls_info_len;
 		char *fls_info_val;
 	} fls_info;
 	utf8str_cis fls_server;
@@ -1137,7 +1137,7 @@ typedef struct fs_locations_server4 fs_locations_server4;
 
 struct fs_locations_item4 {
 	struct {
-		u_int fli_entries_len;
+		uint_t fli_entries_len;
 		fs_locations_server4 *fli_entries_val;
 	} fli_entries;
 	pathname4 fli_rootpath;
@@ -1149,7 +1149,7 @@ struct fs_locations_info4 {
 	int32_t fli_valid_for;
 	pathname4 fli_fs_root;
 	struct {
-		u_int fli_items_len;
+		uint_t fli_items_len;
 		fs_locations_item4 *fli_items_val;
 	} fli_items;
 };
@@ -1182,7 +1182,7 @@ struct nfsv4_1_file_layouthint4 {
 typedef struct nfsv4_1_file_layouthint4 nfsv4_1_file_layouthint4;
 
 typedef struct {
-	u_int multipath_list4_len;
+	uint_t multipath_list4_len;
 	netaddr4 *multipath_list4_val;
 } multipath_list4;
 
@@ -1193,11 +1193,11 @@ typedef struct {
 
 struct nfsv4_1_file_layout_ds_addr4 {
 	struct {
-		u_int nflda_stripe_indices_len;
+		uint_t nflda_stripe_indices_len;
 		uint32_t *nflda_stripe_indices_val;
 	} nflda_stripe_indices;
 	struct {
-		u_int nflda_multipath_ds_list_len;
+		uint_t nflda_multipath_ds_list_len;
 		multipath_list4 *nflda_multipath_ds_list_val;
 	} nflda_multipath_ds_list;
 };
@@ -1214,7 +1214,7 @@ struct nfsv4_1_file_layout4 {
 	uint32_t nfl_first_stripe_index;
 	offset4 nfl_pattern_offset;
 	struct {
-		u_int nfl_fh_list_len;
+		uint_t nfl_fh_list_len;
 		nfs_fh4 *nfl_fh_list_val;
 	} nfl_fh_list;
 };
@@ -2049,7 +2049,7 @@ typedef struct ILLEGAL4res ILLEGAL4res;
  * New operations for nfsv4.1
  */
 typedef struct {
-	u_int gsshandle4_t_len;
+	uint_t gsshandle4_t_len;
 	char *gsshandle4_t_val;
 } gsshandle4_t;
 
@@ -2072,7 +2072,7 @@ typedef struct callback_sec_parms4 callback_sec_parms4;
 struct BACKCHANNEL_CTL4args {
 	uint32_t bca_cb_program;
 	struct {
-		u_int bca_sec_parms_len;
+		uint_t bca_sec_parms_len;
 		callback_sec_parms4 *bca_sec_parms_val;
 	} bca_sec_parms;
 };
@@ -2143,11 +2143,11 @@ typedef struct state_protect_ops4 state_protect_ops4;
 struct ssv_sp_parms4 {
 	state_protect_ops4 ssp_ops;
 	struct {
-		u_int ssp_hash_algs_len;
+		uint_t ssp_hash_algs_len;
 		sec_oid4 *ssp_hash_algs_val;
 	} ssp_hash_algs;
 	struct {
-		u_int ssp_encr_algs_len;
+		uint_t ssp_encr_algs_len;
 		sec_oid4 *ssp_encr_algs_val;
 	} ssp_encr_algs;
 	uint32_t ssp_window;
@@ -2176,7 +2176,7 @@ struct EXCHANGE_ID4args {
 	uint32_t eia_flags;
 	state_protect4_a eia_state_protect;
 	struct {
-		u_int eia_client_impl_id_len;
+		uint_t eia_client_impl_id_len;
 		nfs_impl_id4 *eia_client_impl_id_val;
 	} eia_client_impl_id;
 };
@@ -2189,7 +2189,7 @@ struct ssv_prot_info4 {
 	uint32_t spi_ssv_len;
 	uint32_t spi_window;
 	struct {
-		u_int spi_handles_len;
+		uint_t spi_handles_len;
 		gsshandle4_t *spi_handles_val;
 	} spi_handles;
 };
@@ -2211,11 +2211,11 @@ struct EXCHANGE_ID4resok {
 	state_protect4_r eir_state_protect;
 	server_owner4 eir_server_owner;
 	struct eir_server_scope {
-		u_int eir_server_scope_len;
+		uint_t eir_server_scope_len;
 		char *eir_server_scope_val;
 	} eir_server_scope;
 	struct {
-		u_int eir_server_impl_id_len;
+		uint_t eir_server_impl_id_len;
 		nfs_impl_id4 *eir_server_impl_id_val;
 	} eir_server_impl_id;
 };
@@ -2237,7 +2237,7 @@ struct channel_attrs4 {
 	count4 ca_maxoperations;
 	count4 ca_maxrequests;
 	struct {
-		u_int ca_rdma_ird_len;
+		uint_t ca_rdma_ird_len;
 		uint32_t *ca_rdma_ird_val;
 	} ca_rdma_ird;
 };
@@ -2257,7 +2257,7 @@ struct CREATE_SESSION4args {
 	channel_attrs4 csa_back_chan_attrs;
 	uint32_t csa_cb_program;
 	struct {
-		u_int csa_sec_parms_len;
+		uint_t csa_sec_parms_len;
 		callback_sec_parms4 *csa_sec_parms_val;
 	} csa_sec_parms;
 };
@@ -2380,7 +2380,7 @@ struct GETDEVICELIST4resok {
 	nfs_cookie4 gdlr_cookie;
 	verifier4 gdlr_cookieverf;
 	struct {
-		u_int gdlr_deviceid_list_len;
+		uint_t gdlr_deviceid_list_len;
 		deviceid4 *gdlr_deviceid_list_val;
 	} gdlr_deviceid_list;
 	bool_t gdlr_eof;
@@ -2459,7 +2459,7 @@ struct LAYOUTGET4resok {
 	bool_t logr_return_on_close;
 	stateid4 logr_stateid;
 	struct {
-		u_int logr_layout_len;
+		uint_t logr_layout_len;
 		layout4 *logr_layout_val;
 	} logr_layout;
 };
@@ -2556,11 +2556,11 @@ typedef struct ssa_digest_input4 ssa_digest_input4;
 
 struct SET_SSV4args {
 	struct {
-		u_int ssa_ssv_len;
+		uint_t ssa_ssv_len;
 		char *ssa_ssv_val;
 	} ssa_ssv;
 	struct {
-		u_int ssa_digest_len;
+		uint_t ssa_digest_len;
 		char *ssa_digest_val;
 	} ssa_digest;
 };
@@ -2573,7 +2573,7 @@ typedef struct ssr_digest_input4 ssr_digest_input4;
 
 struct SET_SSV4resok {
 	struct {
-		u_int ssr_digest_len;
+		uint_t ssr_digest_len;
 		char *ssr_digest_val;
 	} ssr_digest;
 };
@@ -2589,7 +2589,7 @@ typedef struct SET_SSV4res SET_SSV4res;
 
 struct TEST_STATEID4args {
 	struct {
-		u_int ts_stateids_len;
+		uint_t ts_stateids_len;
 		stateid4 *ts_stateids_val;
 	} ts_stateids;
 };
@@ -2597,7 +2597,7 @@ typedef struct TEST_STATEID4args TEST_STATEID4args;
 
 struct TEST_STATEID4resok {
 	struct {
-		u_int tsr_status_codes_len;
+		uint_t tsr_status_codes_len;
 		nfsstat4 *tsr_status_codes_val;
 	} tsr_status_codes;
 };
@@ -3005,16 +3005,16 @@ typedef struct notify_remove4 notify_remove4;
 
 struct notify_add4 {
 	struct {
-		u_int nad_old_entry_len;
+		uint_t nad_old_entry_len;
 		notify_remove4 *nad_old_entry_val;
 	} nad_old_entry;
 	notify_entry4 nad_new_entry;
 	struct {
-		u_int nad_new_entry_cookie_len;
+		uint_t nad_new_entry_cookie_len;
 		nfs_cookie4 *nad_new_entry_cookie_val;
 } nad_new_entry_cookie;
 	struct {
-		u_int nad_prev_entry_len;
+		uint_t nad_prev_entry_len;
 		prev_entry4 *nad_prev_entry_val;
 	} nad_prev_entry;
 	bool_t nad_last_entry;
@@ -3039,7 +3039,7 @@ struct notify_verifier4 {
 typedef struct notify_verifier4 notify_verifier4;
 
 typedef struct {
-	u_int notifylist4_len;
+	uint_t notifylist4_len;
 	char *notifylist4_val;
 } notifylist4;
 
@@ -3053,7 +3053,7 @@ struct CB_NOTIFY4args {
 	stateid4 cna_stateid;
 	nfs_fh4 cna_fh;
 	struct {
-		u_int cna_changes_len;
+		uint_t cna_changes_len;
 		notify4 *cna_changes_val;
 	} cna_changes;
 };
@@ -3121,7 +3121,7 @@ typedef struct referring_call4 referring_call4;
 struct referring_call_list4 {
 	sessionid4 rcl_sessionid;
 	struct {
-		u_int rcl_referring_calls_len;
+		uint_t rcl_referring_calls_len;
 		referring_call4 *rcl_referring_calls_val;
 	} rcl_referring_calls;
 };
@@ -3134,7 +3134,7 @@ struct CB_SEQUENCE4args {
 	slotid4 csa_highest_slotid;
 	bool_t csa_cachethis;
 	struct {
-		u_int csa_referring_call_lists_len;
+		uint_t csa_referring_call_lists_len;
 		referring_call_list4 *csa_referring_call_lists_val;
 	} csa_referring_call_lists;
 };
@@ -3200,7 +3200,7 @@ typedef struct notify_deviceid_change4 notify_deviceid_change4;
 
 struct CB_NOTIFY_DEVICEID4args {
 	struct {
-		u_int cnda_changes_len;
+		uint_t cnda_changes_len;
 		notify4 *cnda_changes_val;
 	} cnda_changes;
 };
