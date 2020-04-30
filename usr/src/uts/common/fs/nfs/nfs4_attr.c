@@ -63,7 +63,7 @@ timestruc_to_settime4(timestruc_t *tt, settime4 *tt4, int flags)
 /* ARGSUSED */
 static bool_t
 nfs4_ver_fattr4_attr(vattr_t *vap, struct nfs4_ntov_map *ntovp,
-	union nfs4_attr_u *nap, int flags, int *errorp)
+    union nfs4_attr_u *nap, int flags, int *errorp)
 {
 	bool_t	retval = TRUE;
 
@@ -151,8 +151,8 @@ nfs4_ver_fattr4_attr(vattr_t *vap, struct nfs4_ntov_map *ntovp,
  */
 static bool_t
 nfs4_set_fattr4_attr(vattr_t *vap, vsecattr_t *vsap,
-	struct nfs4_ntov_map *ntovp, union nfs4_attr_u *nap, int flags,
-	int *errorp)
+    struct nfs4_ntov_map *ntovp, union nfs4_attr_u *nap, int flags,
+    int *errorp)
 {
 	bool_t	retval = TRUE;
 
@@ -230,7 +230,7 @@ nfs4_set_fattr4_attr(vattr_t *vap, vsecattr_t *vsap,
  */
 int
 vattr_to_fattr4(vattr_t *vap, vsecattr_t *vsap, fattr4 *fattrp, int flags,
-		enum nfs_opnum4 op, bitmap4 supp)
+    enum nfs_opnum4 op, bitmap4 supp)
 {
 	int i, j;
 	union nfs4_attr_u *na = NULL;

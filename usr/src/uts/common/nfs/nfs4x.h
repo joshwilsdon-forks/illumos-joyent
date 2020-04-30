@@ -13,8 +13,12 @@
  * Copyright 2017 RackTop Systems.
  */
 
-#ifndef _NFS4X_SRV_H
-#define	_NFS4X_SRV_H
+#ifndef _NFS4X_H
+#define	_NFS4X_H
+
+#ifdef	__cplusplus
+extern "C" {
+#endif
 
 #ifdef _KERNEL
 
@@ -107,7 +111,7 @@ typedef struct {
  *                             |  | status, slot, seqid, resp *||
  *                             |  +----------------------------+|
  *			       | .				|
- *			       | : 				|
+ *			       | :				|
  *                             +--------------------------------+
  *                             stok_t
  */
@@ -192,4 +196,8 @@ void rfs4x_sequence_done(COMPOUND4res *, struct compound_state *);
 
 #endif	/* _KERNEL */
 
-#endif /* _NFS4_SRV_H */
+#ifdef	__cplusplus
+}
+#endif
+
+#endif /* _NFS4X_H */

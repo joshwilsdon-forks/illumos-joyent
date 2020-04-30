@@ -38,7 +38,7 @@
  *
  * CAUTION:  This file is kept in sync with it's uts counterpart:
  *
- * 	usr/src/uts/common/fs/nfs/nfs4_xdr.c
+ *	usr/src/uts/common/fs/nfs/nfs4_xdr.c
  *
  * However, it is not an exact copy.  NEVER copy uts's nfs4_xdr.c
  * directly over this file.   Changes from the uts version must be
