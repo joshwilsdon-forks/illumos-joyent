@@ -538,12 +538,16 @@ rfs4x_exchange_id_free(nfs_resop4 *resop)
 	EXCHANGE_ID4res		*resp = &resop->nfs_resop4_u.opexchange_id;
 	EXCHANGE_ID4resok	*rok = &resp->EXCHANGE_ID4res_u.eir_resok4;
 	struct server_owner4	*sop = &rok->eir_server_owner;
+	struct eir_server_scope *ss = &rok->eir_server_scope;
 	nfs_impl_id4		*nip;
 	int			 len = 0;
 
 	/* Server Owner: major */
-	if ((len = sop->so_major_id.so_major_id_len) != 0)
+	if ((len = sop->so_major_id.so_major_id_len) != 0) {
 		kmem_free(sop->so_major_id.so_major_id_val, len);
+		ASSERT(ss->eir_server_scope_len == len);
+		kmem_free(ss->eir_server_scope_val, len);
+	}
 
 	if ((nip = rok->eir_server_impl_id.eir_server_impl_id_val) != NULL) {
 		/* Immplementation */
