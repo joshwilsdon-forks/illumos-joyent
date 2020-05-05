@@ -3026,6 +3026,11 @@ xdr_OPEN4args(XDR *xdrs, OPEN4args *objp)
 			    &objp->createhow4_u.createattrs);
 			break;
 		case EXCLUSIVE4:
+			break;
+		case EXCLUSIVE4_1:
+			(void) xdr_creatverfattr(xdrs,
+			    &objp->createhow4_u.ch_createboth);
+			break;
 		default:
 			break;
 		}
