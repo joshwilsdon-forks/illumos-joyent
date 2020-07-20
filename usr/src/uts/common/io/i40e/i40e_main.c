@@ -13,6 +13,8 @@
  * Copyright 2015 OmniTI Computer Consulting, Inc. All rights reserved.
  * Copyright 2019 Joyent, Inc.
  * Copyright 2017 Tegile Systems, Inc.  All rights reserved.
+ * Copyright 2020 RackTop Systems, Inc.
+ * Copyright 2020 Ryan Zezeski
  */
 
 /*
@@ -1219,7 +1221,7 @@ i40e_hw_to_instance(i40e_t *i40e, i40e_hw_t *hw)
 	}
 
 	if (i40e->i40e_num_rx_groups == 0) {
-		i40e->i40e_num_rx_groups = I40E_GROUP_MAX;
+		i40e->i40e_num_rx_groups = I40E_DEF_NUM_RX_GROUPS;
 	}
 }
 
@@ -1279,19 +1281,19 @@ i40e_common_code_init(i40e_t *i40e, i40e_hw_t *hw)
 	}
 
 	if (hw->aq.api_maj_ver == I40E_FW_API_VERSION_MAJOR &&
-	    hw->aq.api_min_ver > I40E_FW_API_VERSION_MINOR) {
+	    hw->aq.api_min_ver > I40E_FW_MINOR_VERSION(hw)) {
 		i40e_log(i40e, "The driver for the device detected a newer "
 		    "version of the NVM image (%d.%d) than expected (%d.%d).\n"
 		    "Please install the most recent version of the network "
 		    "driver.\n", hw->aq.api_maj_ver, hw->aq.api_min_ver,
-		    I40E_FW_API_VERSION_MAJOR, I40E_FW_API_VERSION_MINOR);
+		    I40E_FW_API_VERSION_MAJOR, I40E_FW_MINOR_VERSION(hw));
 	} else if (hw->aq.api_maj_ver < I40E_FW_API_VERSION_MAJOR ||
-	    hw->aq.api_min_ver < (I40E_FW_API_VERSION_MINOR - 1)) {
+	    hw->aq.api_min_ver < (I40E_FW_MINOR_VERSION(hw) - 1)) {
 		i40e_log(i40e, "The driver for the device detected an older"
 		    " version of the NVM image (%d.%d) than expected (%d.%d)."
 		    "\nPlease update the NVM image.\n",
 		    hw->aq.api_maj_ver, hw->aq.api_min_ver,
-		    I40E_FW_API_VERSION_MAJOR, I40E_FW_API_VERSION_MINOR - 1);
+		    I40E_FW_API_VERSION_MAJOR, I40E_FW_MINOR_VERSION(hw) - 1);
 	}
 
 	i40e_clear_pxe_mode(hw);
@@ -1588,6 +1590,10 @@ i40e_init_properties(i40e_t *i40e)
 	    i40e->i40e_tx_ring_size - I40E_TX_MAX_COOKIE,
 	    I40E_DEF_TX_BLOCK_THRESH);
 
+	i40e->i40e_num_rx_groups = i40e_get_prop(i40e, "rx_num_groups",
+	    I40E_MIN_NUM_RX_GROUPS, I40E_MAX_NUM_RX_GROUPS,
+	    I40E_DEF_NUM_RX_GROUPS);
+
 	i40e->i40e_rx_ring_size = i40e_get_prop(i40e, "rx_ring_size",
 	    I40E_MIN_RX_RING_SIZE, I40E_MAX_RX_RING_SIZE,
 	    I40E_DEF_RX_RING_SIZE);
@@ -1757,6 +1763,7 @@ alloc_handle_fail:
 static boolean_t
 i40e_alloc_intrs(i40e_t *i40e, dev_info_t *devinfo)
 {
+	i40e_hw_t *hw = &i40e->i40e_hw_space;
 	int intr_types, rc;
 	uint_t max_trqpairs;
 
@@ -1774,7 +1781,6 @@ i40e_alloc_intrs(i40e_t *i40e, dev_info_t *devinfo)
 	}
 
 	i40e->i40e_intr_type = 0;
-	i40e->i40e_num_rx_groups = I40E_GROUP_MAX;
 
 	/*
 	 * We need to determine the number of queue pairs per traffic
@@ -1786,7 +1792,7 @@ i40e_alloc_intrs(i40e_t *i40e, dev_info_t *devinfo)
 	if ((intr_types & DDI_INTR_TYPE_MSIX) &&
 	    (i40e->i40e_intr_force <= I40E_INTR_MSIX) &&
 	    (i40e_alloc_intr_handles(i40e, devinfo, DDI_INTR_TYPE_MSIX))) {
-		uint32_t n;
+		uint32_t n, qp_cap, num_trqpairs;
 
 		/*
 		 * While we want the number of queue pairs to match
@@ -1820,9 +1826,25 @@ i40e_alloc_intrs(i40e_t *i40e, dev_info_t *devinfo)
 		 */
 		n = 0x1 << ddi_fls(n);
 		i40e->i40e_num_trqpairs_per_vsi = n;
+
+		/*
+		 * Make sure the number of tx/rx qpairs does not exceed
+		 * the device's capabilities.
+		 */
 		ASSERT3U(i40e->i40e_num_rx_groups, >, 0);
-		i40e->i40e_num_trqpairs = i40e->i40e_num_trqpairs_per_vsi *
+		qp_cap = MIN(hw->func_caps.num_rx_qp, hw->func_caps.num_tx_qp);
+		num_trqpairs = i40e->i40e_num_trqpairs_per_vsi *
 		    i40e->i40e_num_rx_groups;
+		if (num_trqpairs > qp_cap) {
+			i40e->i40e_num_rx_groups = MAX(1, qp_cap /
+			    i40e->i40e_num_trqpairs_per_vsi);
+			num_trqpairs = i40e->i40e_num_trqpairs_per_vsi *
+			    i40e->i40e_num_rx_groups;
+			i40e_log(i40e, "Rx groups restricted to %u",
+			    i40e->i40e_num_rx_groups);
+		}
+		ASSERT3U(num_trqpairs, >, 0);
+		i40e->i40e_num_trqpairs = num_trqpairs;
 		return (B_TRUE);
 	}
 
