@@ -31,14 +31,25 @@ d boot/acpi 0755 root sys
 d boot/acpi/tables 0755 root sys
 d boot/fonts 0755 root sys
 f boot/fonts/10x18.fnt 0444 root bin
+f boot/fonts/10x18b.fnt 0444 root bin
 f boot/fonts/10x20.fnt 0444 root bin
+f boot/fonts/10x20b.fnt 0444 root bin
 f boot/fonts/11x22.fnt 0444 root bin
+f boot/fonts/11x22b.fnt 0444 root bin
 f boot/fonts/12x24.fnt 0444 root bin
+f boot/fonts/12x24b.fnt 0444 root bin
 f boot/fonts/14x28.fnt 0444 root bin
+f boot/fonts/14x28b.fnt 0444 root bin
 f boot/fonts/16x32.fnt 0444 root bin
+f boot/fonts/16x32b.fnt 0444 root bin
 f boot/fonts/6x12.fnt 0444 root bin
+f boot/fonts/6x12b.fnt 0444 root bin
 f boot/fonts/8x14.fnt 0444 root bin
+f boot/fonts/8x14b.fnt 0444 root bin
+f boot/fonts/8x14v.fnt 0444 root bin
 f boot/fonts/8x16.fnt 0444 root bin
+f boot/fonts/8x16b.fnt 0444 root bin
+f boot/fonts/8x16v.fnt 0444 root bin
 f boot/fonts/Gallant19.fnt 0444 root bin
 f boot/fonts/fonts.dir 0444 root bin
 d boot/forth 0755 root root
@@ -537,6 +548,7 @@ d etc/skel 0755 root sys
 f etc/skel/.bashrc 0644 root other
 f etc/skel/.kshrc 0644 root other
 f etc/skel/.profile 0644 root other
+f etc/smhba.conf 0644 root sys
 d etc/sock2path.d 0755 root sys
 f etc/sock2path.d/driver%2Fnetwork%2Fbpf 0644 root sys
 f etc/sock2path.d/driver%2Fnetwork%2Fsdp 0644 root sys
@@ -6925,8 +6937,6 @@ f usr/lib/libsun_ima.so.1 0755 root bin
 s usr/lib/libsun_ima.so=libsun_ima.so.1
 f usr/lib/libsun_sas.so.1 0755 root bin
 s usr/lib/libsun_sas.so=libsun_sas.so.1
-f usr/lib/libsys.so.1 0755 root bin
-s usr/lib/libsys.so=libsys.so.1
 s usr/lib/libsysevent.so.1=../../lib/libsysevent.so.1
 s usr/lib/libsysevent.so=../../lib/libsysevent.so.1
 f usr/lib/libtecla.so.1 0755 root bin
@@ -10069,6 +10079,7 @@ f usr/lib/mdb/kvm/amd64/scsi_vhci.so 0555 root sys
 f usr/lib/mdb/kvm/amd64/sctp.so 0555 root sys
 f usr/lib/mdb/kvm/amd64/sd.so 0555 root sys
 f usr/lib/mdb/kvm/amd64/smbfs.so 0555 root sys
+f usr/lib/mdb/kvm/amd64/smbios.so 0555 root sys
 f usr/lib/mdb/kvm/amd64/smbsrv.so 0555 root sys
 f usr/lib/mdb/kvm/amd64/sockfs.so 0555 root sys
 f usr/lib/mdb/kvm/amd64/specfs.so 0555 root sys
@@ -10964,6 +10975,7 @@ f usr/sbin/rtquery 0555 root bin
 f usr/sbin/rwall 0555 root bin
 f usr/sbin/sacadm 4755 root sys
 f usr/sbin/safe_finger 0555 root bin
+f usr/sbin/sasinfo 0555 root bin
 f usr/sbin/sbdadm 0555 root bin
 s usr/sbin/sendmail=../lib/mailwrapper
 f usr/sbin/setmnt 0555 root bin
@@ -16450,7 +16462,6 @@ f usr/share/man/man3lib/libslp.3lib 0444 root bin
 s usr/share/man/man3lib/libsmhbaapi.3lib=libSMHBAAPI.3lib
 f usr/share/man/man3lib/libsocket.3lib 0444 root bin
 f usr/share/man/man3lib/libstmf.3lib 0444 root bin
-f usr/share/man/man3lib/libsys.3lib 0444 root bin
 f usr/share/man/man3lib/libsysevent.3lib 0444 root bin
 f usr/share/man/man3lib/libtecla.3lib 0444 root bin
 s usr/share/man/man3lib/libtermcap.3lib=libcurses.3lib
