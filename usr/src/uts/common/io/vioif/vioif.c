@@ -632,7 +632,9 @@ vioif_ctrlq_req(vioif_t *vif, uint8_t class, uint8_t cmd, void *data,
 		.vnch_class = class,
 		.vnch_command = cmd,
 	};
-	size_t len = sizeof (hdr) + datalen + 1; /* + 1 for trailing ack byte */
+	const size_t hdrlen = sizeof (hdr);
+	const size_t acklen = 1; /* the ack is always 1 byte */
+	size_t totlen = hdrlen + datalen + acklen;
 	int r = DDI_SUCCESS;
 
 	/*
@@ -651,24 +653,53 @@ vioif_ctrlq_req(vioif_t *vif, uint8_t class, uint8_t cmd, void *data,
 	}
 	mutex_exit(&vif->vif_mutex);
 
-	if (len > virtio_dma_size(cb->cb_dma)) {
+	if (totlen > virtio_dma_size(cb->cb_dma)) {
 		vif->vif_ctrlbuf_toosmall++;
 		r = DDI_FAILURE;
 		goto done;
 	}
 
+	/*
+	 * Clear the entire buffer. Technically not necessary, but useful
+	 * if trying to troubleshoot an issue, and probably not a bad idea
+	 * to let any old data linger.
+	 */
 	p = virtio_dma_va(cb->cb_dma, 0);
-	bzero(p, len);
+	bzero(p, virtio_dma_size(cb->cb_dma));
 
+	/*
+	 * We currently do not support VIRTIO_F_ANY_LAYOUT. That means,
+	 * that we must put the header, the data, and the ack in their
+	 * own respective descriptors. Since all the currently supported
+	 * control queue commands take _very_ small amounts of data, we
+	 * use a single DMA buffer for all of it, but use 3 descriptors to
+	 * reference (respectively) the header, the data, and the ack byte
+	 * within that memory to adhere to the virtio spec.
+	 *
+	 * If we add support for control queue features such as custom
+	 * MAC filtering tables, which might require larger amounts of
+	 * memory, we likely will want to add more sophistication here
+	 * and optionally use additional allocated memory to hold that
+	 * data instead of a fixed size buffer.
+	 */
 	bcopy(&hdr, p, sizeof (hdr));
-	p += sizeof (hdr);
-
-	bcopy(data, p, datalen);
-	p += datalen;
-	/* p now points at the ACK byte */
-
 	if ((r = virtio_chain_append(cb->cb_chain,
-	    virtio_dma_cookie_pa(cb->cb_dma, 0), len,
+	    virtio_dma_cookie_pa(cb->cb_dma, 0), hdrlen,
+	    VIRTIO_DIR_DEVICE_READS)) != DDI_SUCCESS) {
+		goto done;
+	}
+
+	p = virtio_dma_va(cb->cb_dma, hdrlen);
+	bcopy(data, p, datalen);
+	if ((r = virtio_chain_append(cb->cb_chain,
+	    virtio_dma_cookie_pa(cb->cb_dma, hdrlen), datalen,
+	    VIRTIO_DIR_DEVICE_READS)) != DDI_SUCCESS) {
+		goto done;
+	}
+
+	p = virtio_dma_va(cb->cb_dma, datalen);
+	if ((r = virtio_chain_append(cb->cb_chain,
+	    virtio_dma_cookie_pa(cb->cb_dma, hdrlen + datalen), acklen,
 	    VIRTIO_DIR_DEVICE_WRITES)) != DDI_SUCCESS) {
 		goto done;
 	}
