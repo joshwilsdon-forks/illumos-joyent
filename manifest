@@ -10101,6 +10101,7 @@ f usr/lib/mdb/proc/amd64/libcmdutils.so 0555 root sys
 f usr/lib/mdb/proc/amd64/libnvpair.so 0555 root sys
 f usr/lib/mdb/proc/amd64/libproc.so 0555 root sys
 f usr/lib/mdb/proc/amd64/libpython2.6.so 0555 root sys
+f usr/lib/mdb/proc/amd64/libsmbios.so 0555 root sys
 f usr/lib/mdb/proc/amd64/libsysevent.so 0555 root sys
 f usr/lib/mdb/proc/amd64/libtopo.so 0555 root sys
 f usr/lib/mdb/proc/amd64/libumem.so 0555 root sys
@@ -10118,6 +10119,7 @@ f usr/lib/mdb/proc/libmlsvc.so 0555 root sys
 f usr/lib/mdb/proc/libnvpair.so 0555 root sys
 f usr/lib/mdb/proc/libproc.so 0555 root sys
 f usr/lib/mdb/proc/libpython2.6.so 0555 root sys
+f usr/lib/mdb/proc/libsmbios.so 0555 root sys
 f usr/lib/mdb/proc/libsysevent.so 0555 root sys
 f usr/lib/mdb/proc/libtopo.so 0555 root sys
 f usr/lib/mdb/proc/libumem.so 0555 root sys
@@ -12802,6 +12804,7 @@ s usr/share/man/man2/fstat.2=stat.2
 s usr/share/man/man2/fstatat.2=stat.2
 s usr/share/man/man2/fstatvfs.2=statvfs.2
 s usr/share/man/man2/futimens.2=utimes.2
+s usr/share/man/man2/futimes.2=utimes.2
 s usr/share/man/man2/futimesat.2=utimes.2
 f usr/share/man/man2/getacct.2 0444 root bin
 f usr/share/man/man2/getaudit.2 0444 root bin
@@ -12841,6 +12844,7 @@ s usr/share/man/man2/linkat.2=link.2
 f usr/share/man/man2/llseek.2 0444 root bin
 f usr/share/man/man2/lseek.2 0444 root bin
 s usr/share/man/man2/lstat.2=stat.2
+s usr/share/man/man2/lutimes.2=utimes.2
 f usr/share/man/man2/memcntl.2 0444 root bin
 f usr/share/man/man2/meminfo.2 0444 root bin
 f usr/share/man/man2/mincore.2 0444 root bin
@@ -15930,6 +15934,8 @@ s usr/share/man/man3head/TAILQ_NEXT.3head=queue.h.3head
 s usr/share/man/man3head/TAILQ_PREV.3head=queue.h.3head
 s usr/share/man/man3head/TAILQ_REMOVE.3head=queue.h.3head
 s usr/share/man/man3head/TAILQ_SWAP.3head=queue.h.3head
+s usr/share/man/man3head/TIMESPEC_TO_TIMEVAL.3head=timespec.3head
+s usr/share/man/man3head/TIMEVAL_TO_TIMESPEC.3head=timespec.3head
 s usr/share/man/man3head/acct.3head=acct.h.3head
 f usr/share/man/man3head/acct.h.3head 0444 root bin
 s usr/share/man/man3head/aio.3head=aio.h.3head
@@ -16076,6 +16082,8 @@ s usr/share/man/man3head/timeb.3head=timeb.h.3head
 f usr/share/man/man3head/timeb.h.3head 0444 root bin
 s usr/share/man/man3head/times.3head=times.h.3head
 f usr/share/man/man3head/times.h.3head 0444 root bin
+f usr/share/man/man3head/timespec.3head 0444 root bin
+s usr/share/man/man3head/timeval.3head=timespec.3head
 s usr/share/man/man3head/types.3head=types.h.3head
 f usr/share/man/man3head/types.h.3head 0444 root bin
 s usr/share/man/man3head/types32.3head=types32.h.3head
@@ -19920,6 +19928,7 @@ d usr/share/man/man9f 0755 root bin
 f usr/share/man/man9f/ASSERT.9f 0444 root bin
 s usr/share/man/man9f/AVL_NEXT.9f=avl.9f
 s usr/share/man/man9f/AVL_PREV.9f=avl.9f
+s usr/share/man/man9f/CRED.9f=credentials.9f
 f usr/share/man/man9f/Intro.9f 0444 root bin
 f usr/share/man/man9f/OTHERQ.9f 0444 root bin
 f usr/share/man/man9f/RD.9f 0444 root bin
@@ -20102,6 +20111,10 @@ f usr/share/man/man9f/copyb.9f 0444 root bin
 f usr/share/man/man9f/copyin.9f 0444 root bin
 f usr/share/man/man9f/copymsg.9f 0444 root bin
 f usr/share/man/man9f/copyout.9f 0444 root bin
+f usr/share/man/man9f/credentials.9f 0444 root bin
+s usr/share/man/man9f/crdup.9f=credentials.9f
+s usr/share/man/man9f/crfree.9f=credentials.9f
+s usr/share/man/man9f/crget.9f=credentials.9f
 s usr/share/man/man9f/crgetgid.9f=ddi_cred.9f
 s usr/share/man/man9f/crgetgroups.9f=ddi_cred.9f
 s usr/share/man/man9f/crgetngroups.9f=ddi_cred.9f
@@ -20111,6 +20124,7 @@ s usr/share/man/man9f/crgetsgid.9f=ddi_cred.9f
 s usr/share/man/man9f/crgetsuid.9f=ddi_cred.9f
 s usr/share/man/man9f/crgetuid.9f=ddi_cred.9f
 s usr/share/man/man9f/crgetzoneid.9f=ddi_cred.9f
+s usr/share/man/man9f/crhold.9f=credentials.9f
 f usr/share/man/man9f/csx_AccessConfigurationRegister.9f 0444 root bin
 f usr/share/man/man9f/csx_CS_DDI_Info.9f 0444 root bin
 f usr/share/man/man9f/csx_ConvertSize.9f 0444 root bin
@@ -20603,6 +20617,7 @@ s usr/share/man/man9f/inl.9f=inb.9f
 f usr/share/man/man9f/insq.9f 0444 root bin
 s usr/share/man/man9f/intro.9f=Intro.9f
 s usr/share/man/man9f/inw.9f=inb.9f
+s usr/share/man/man9f/kcred.9f=credentials.9f
 f usr/share/man/man9f/kiconv.9f 0444 root bin
 f usr/share/man/man9f/kiconv_close.9f 0444 root bin
 f usr/share/man/man9f/kiconv_open.9f 0444 root bin
@@ -21210,6 +21225,7 @@ s usr/share/man/man9f/vsprintf.9f=sprintf.9f
 s usr/share/man/man9f/vzcmn_err.9f=cmn_err.9f
 s usr/share/man/man9f/wr.9f=WR.9f
 s usr/share/man/man9f/zcmn_err.9f=cmn_err.9f
+s usr/share/man/man9f/zone_kcred.9f=credentials.9f
 d usr/share/man/man9p 0755 root bin
 s usr/share/man/man9p/Nblock.9p=size.9p
 s usr/share/man/man9p/blksize.9p=size.9p
