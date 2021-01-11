@@ -12,7 +12,7 @@
 /*
  * Copyright 2013 Nexenta Inc.  All rights reserved.
  * Copyright (c) 2014, 2016 by Delphix. All rights reserved.
- * Copyright 2020 Joyent, Inc.
+ * Copyright 2021 Joyent, Inc.
  * Copyright 2019 Joshua M. Clulow <josh@sysmgr.org>
  */
 
@@ -662,7 +662,7 @@ vioif_ctrlq_req(vioif_t *vif, uint8_t class, uint8_t cmd, void *data,
 	/*
 	 * Clear the entire buffer. Technically not necessary, but useful
 	 * if trying to troubleshoot an issue, and probably not a bad idea
-	 * to let any old data linger.
+	 * to not let any old data linger.
 	 */
 	p = virtio_dma_va(cb->cb_dma, 0);
 	bzero(p, virtio_dma_size(cb->cb_dma));
@@ -697,7 +697,7 @@ vioif_ctrlq_req(vioif_t *vif, uint8_t class, uint8_t cmd, void *data,
 		goto done;
 	}
 
-	p = virtio_dma_va(cb->cb_dma, datalen);
+	p = virtio_dma_va(cb->cb_dma, hdrlen + datalen);
 	if ((r = virtio_chain_append(cb->cb_chain,
 	    virtio_dma_cookie_pa(cb->cb_dma, hdrlen + datalen), acklen,
 	    VIRTIO_DIR_DEVICE_WRITES)) != DDI_SUCCESS) {
